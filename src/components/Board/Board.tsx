@@ -1,5 +1,6 @@
-import { FC, useCallback, useEffect, useState } from 'react'
-import { fsm } from '../../libs/fsm'
+import { FC, useCallback } from 'react'
+import { fsm } from '../../libs/fsm/fsm'
+import { useMachine } from '../../libs/fsm/useMachine'
 import { AboutView } from '../About/About'
 import { ContactsView } from '../Contacts/Contacts'
 import { HomeView } from '../Home/Home'
@@ -19,13 +20,7 @@ export const Board: FC = () => {
         }
     })
 
-    const [currentPage, setCurrentPage] = useState(boardFsm.state)
-
-    useEffect(() => {
-        boardFsm.subscribe(state => {
-            setCurrentPage(state)
-        })
-    }, [])
+    const currentPage = useMachine(boardFsm)
 
     const send = (msg: string) => () => boardFsm.send(msg)
 
