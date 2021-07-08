@@ -1,10 +1,10 @@
-import { FSM, SubscriberCallback, Subscribers, Transitions } from './types'
+import { FSM, FSMInput, SubscriberCallback, Subscribers } from './types'
 
 export class Subscriber {
     constructor(public callback: SubscriberCallback, public _id: number) {}
 }
 
-export const fsm = (initState: string, transitions: Transitions) => {
+export const fsm = ({ initState, transitions, context }: FSMInput) => {
     const subscribers: Subscribers = {
         all: [],
         byTrigger: {}
@@ -12,19 +12,18 @@ export const fsm = (initState: string, transitions: Transitions) => {
 
     class Machine implements FSM {
         state = initState
+        context = context
 
-        private notifyAllSubscribers(state: string) {
+        private notifyAllSubscribers() {
             if (subscribers.all.length) {
-                subscribers.all.forEach(subscriber =>
-                    subscriber.callback(state)
-                )
+                subscribers.all.forEach(subscriber => subscriber.callback(this))
             }
         }
 
-        private notifySubscribersByTrigger(state: string, trigger: string) {
+        private notifySubscribersByTrigger(trigger: string) {
             if (subscribers.byTrigger[trigger]?.length) {
                 subscribers.byTrigger[trigger].forEach(subscriber =>
-                    subscriber.callback(state)
+                    subscriber.callback(this)
                 )
             }
         }
@@ -33,14 +32,26 @@ export const fsm = (initState: string, transitions: Transitions) => {
             return subscribers.filter(({ _id }) => subscriber._id !== _id)
         }
 
-        send(trigger: string) {
-            const nextState = transitions[this.state][trigger]
+        async send(trigger: string) {
+            const { target, actions } = transitions[this.state][trigger]
 
-            if (nextState && nextState !== this.state) {
-                this.state = nextState
+            if (target && target !== this.state) {
+                this.state = target
 
-                this.notifyAllSubscribers(this.state)
-                this.notifySubscribersByTrigger(this.state, trigger)
+                if (actions?.length) {
+                    const { state, context } = this
+
+                    for await (const action of actions) {
+                        const newContext = await action({ state, context })
+                        this.context = {
+                            ...this.context,
+                            ...newContext
+                        }
+                    }
+                }
+
+                this.notifyAllSubscribers()
+                this.notifySubscribersByTrigger(trigger)
             }
         }
 

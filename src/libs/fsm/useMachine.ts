@@ -2,15 +2,18 @@ import { useEffect, useState } from 'react'
 import { FSM } from './types'
 
 export const useMachine = (machine: FSM) => {
-    const [currentState, setCurrentState] = useState(machine.state)
+    const [model, setModel] = useState(machine)
 
     useEffect(() => {
-        const unsubscribe = machine.subscribe(nextState => {
-            setCurrentState(nextState)
+        const unsubscribe = machine.subscribe(newMachine => {
+            setModel(prev => ({
+                ...prev,
+                ...newMachine
+            }))
         })
 
         return () => unsubscribe()
     }, [])
 
-    return currentState
+    return model
 }

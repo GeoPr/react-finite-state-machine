@@ -5,22 +5,47 @@ import { AboutView } from '../About/About'
 import { ContactsView } from '../Contacts/Contacts'
 import { HomeView } from '../Home/Home'
 
+const updateMessage = (message: string) => ({
+    message: `${message} now`
+})
+
 export const Board: FC = () => {
-    const boardFsm = fsm('home', {
-        home: {
-            toAbout: 'about'
+    const boardFsm = fsm({
+        initState: 'home',
+        context: {
+            message: 'home now'
         },
-        about: {
-            toHome: 'home',
-            toContacts: 'contacts'
-        },
-        contacts: {
-            toAbout: 'about',
-            toHome: 'home'
+        transitions: {
+            home: {
+                toAbout: {
+                    target: 'about',
+                    actions: [({ state }) => updateMessage(state)]
+                }
+            },
+            about: {
+                toHome: {
+                    target: 'home',
+                    actions: [({ state }) => updateMessage(state)]
+                },
+                toContacts: {
+                    target: 'contacts',
+                    actions: [({ state }) => updateMessage(state)]
+                }
+            },
+            contacts: {
+                toAbout: {
+                    target: 'about',
+                    actions: [({ state }) => updateMessage(state)]
+                },
+                toHome: {
+                    target: 'home',
+                    actions: [({ state }) => updateMessage(state)]
+                }
+            }
         }
     })
 
-    const currentPage = useMachine(boardFsm)
+    const { state: currentPage, context } = useMachine(boardFsm)
 
     const send = (msg: string) => () => boardFsm.send(msg)
 
@@ -36,5 +61,10 @@ export const Board: FC = () => {
         contacts: <ContactsView toAbout={toAbout} toHome={toHome} />
     }
 
-    return <>{pages[currentPage as keyof typeof pages]}</>
+    return (
+        <>
+            {pages[currentPage as keyof typeof pages]}
+            {context?.message}
+        </>
+    )
 }
